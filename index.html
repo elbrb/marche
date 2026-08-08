@@ -860,11 +860,36 @@ function Avvio() {
       setStato("errore");
     }
   };
-  const entra = () => {
-    const c = manuale.trim().split("/").pop().replace(/^#?c=/, "");
-    if (!c) return;
-    archivio.ricorda(c);
-    setId(c);
+  const estrai = (testo) => {
+    const t = testo.trim();
+    const m = t.match(/[#?&]c=([^&\s]+)/);
+    if (m) return m[1];
+    return t.split("/").pop().replace(/^#/, "");
+  };
+  const entra = async () => {
+    const c = estrai(manuale);
+    if (!c) {
+      setStato("vuoto");
+      return;
+    }
+    setStato("verifica");
+    try {
+      const r = await fetch(`${API}/${c}`, { cache: "no-store" });
+      if (!r.ok) {
+        setStato("inesistente");
+        return;
+      }
+      archivio.ricorda(c);
+      setId(c);
+    } catch (e) {
+      setStato("rete");
+    }
+  };
+  const messaggi = {
+    vuoto: "Non ho trovato nessun codice: incolla il link intero oppure il solo codice.",
+    inesistente: "Questo codice non esiste. Controlla di aver copiato il link per intero.",
+    rete: "Non riesco a collegarmi. Controlla la connessione e riprova.",
+    errore: "Non sono riuscita a creare lo spazio: controlla la connessione e riprova."
   };
   if (id) return /* @__PURE__ */ React.createElement(VacanzaMarche, null);
   return /* @__PURE__ */ React.createElement("div", { className: "min-h-screen w-full flex items-center justify-center px-6", style: { background: C.glass, fontFamily: BODY } }, /* @__PURE__ */ React.createElement("div", { className: "w-full max-w-sm rounded-2xl p-6", style: { background: C.paper, boxShadow: "0 12px 30px rgba(11,42,60,0.14)" } }, /* @__PURE__ */ React.createElement("div", { className: "text-center" }, /* @__PURE__ */ React.createElement("div", { style: { fontFamily: DISPLAY, fontWeight: 900, fontSize: 30, color: C.ink, lineHeight: 1 } }, "Marche"), /* @__PURE__ */ React.createElement("div", { className: "mt-1 mb-5", style: { fontFamily: MONO, fontSize: 11, letterSpacing: "0.14em", color: C.coral } }, "08 \u2192 14 AGO \xB7 ELE + VIKI")), /* @__PURE__ */ React.createElement(
@@ -875,29 +900,38 @@ function Avvio() {
       style: { background: C.ink, color: C.paper, fontFamily: BODY, fontWeight: 600, fontSize: 15 }
     },
     stato === "attesa" ? "Creo lo spazio\u2026" : "Crea il nostro spazio condiviso"
-  ), /* @__PURE__ */ React.createElement("div", { className: "text-center mb-4", style: { fontFamily: BODY, fontSize: 12, color: "#6B8A90" } }, "Fallo una volta sola, poi manda il link a Viki."), stato === "errore" && /* @__PURE__ */ React.createElement("div", { className: "mb-4", style: { fontFamily: BODY, fontSize: 13, color: C.coral } }, "Non sono riuscita a creare lo spazio: controlla la connessione e riprova."), /* @__PURE__ */ React.createElement("div", { style: { borderTop: `1px solid ${C.line}` }, className: "pt-4" }, /* @__PURE__ */ React.createElement("div", { className: "mb-2", style: { fontFamily: MONO, fontSize: 10, letterSpacing: "0.12em", color: C.sea } }, "HAI GI\xC0 UN CODICE O UN LINK?"), /* @__PURE__ */ React.createElement("div", { className: "flex gap-2" }, /* @__PURE__ */ React.createElement(Campo, { placeholder: "incolla qui", value: manuale, onChange: (e) => setManuale(e.target.value) }), /* @__PURE__ */ React.createElement(Bottone, { onClick: entra, tono: "vuoto" }, "Entra")))));
+  ), /* @__PURE__ */ React.createElement("div", { className: "text-center mb-4", style: { fontFamily: BODY, fontSize: 12, color: "#6B8A90" } }, "Fallo una volta sola, poi manda il link a Viki."), messaggi[stato] && /* @__PURE__ */ React.createElement("div", { className: "mb-4 rounded-lg px-3 py-2", style: { background: "#FDEEEA", fontFamily: BODY, fontSize: 13, color: C.coral } }, messaggi[stato]), /* @__PURE__ */ React.createElement("div", { style: { borderTop: `1px solid ${C.line}` }, className: "pt-4" }, /* @__PURE__ */ React.createElement("div", { className: "mb-2", style: { fontFamily: MONO, fontSize: 10, letterSpacing: "0.12em", color: C.sea } }, "HAI GI\xC0 UN CODICE O UN LINK?"), /* @__PURE__ */ React.createElement("div", { className: "flex gap-2" }, /* @__PURE__ */ React.createElement(Campo, { placeholder: "incolla qui", value: manuale, onChange: (e) => setManuale(e.target.value) }), /* @__PURE__ */ React.createElement(Bottone, { onClick: entra }, stato === "verifica" ? "\u2026" : "Entra")))));
 }
 function BarraCodice() {
-  const [copiato, setCopiato] = useState(false);
+  const [fatto, setFatto] = useState("");
   if (!archivio.codice) return null;
-  const copia = async () => {
+  const online = location.protocol === "https:" || location.protocol === "http:";
+  const copia = async (testo, etichetta) => {
     try {
-      await navigator.clipboard.writeText(location.href);
-      setCopiato(true);
-      setTimeout(() => setCopiato(false), 2e3);
+      await navigator.clipboard.writeText(testo);
+      setFatto(etichetta);
+      setTimeout(() => setFatto(""), 2e3);
     } catch (e) {
-      setCopiato(false);
+      setFatto("manuale");
     }
   };
-  return /* @__PURE__ */ React.createElement("div", { className: "w-full px-4 py-2 flex items-center gap-3", style: { background: C.ink } }, /* @__PURE__ */ React.createElement("span", { className: "flex-1 truncate", style: { fontFamily: MONO, fontSize: 10, color: "#9DC4C6", letterSpacing: "0.08em" } }, "CODICE ", archivio.codice.slice(0, 10), "\u2026"), /* @__PURE__ */ React.createElement(
+  return /* @__PURE__ */ React.createElement("div", { className: "w-full px-4 py-2", style: { background: C.ink } }, /* @__PURE__ */ React.createElement("div", { className: "flex items-center gap-2 flex-wrap" }, /* @__PURE__ */ React.createElement("span", { style: { fontFamily: MONO, fontSize: 10, color: "#9DC4C6", letterSpacing: "0.08em" } }, "CODICE"), /* @__PURE__ */ React.createElement("span", { className: "select-all", style: { fontFamily: MONO, fontSize: 11, color: C.paper, wordBreak: "break-all" } }, archivio.codice), /* @__PURE__ */ React.createElement("div", { className: "flex gap-2 ml-auto" }, /* @__PURE__ */ React.createElement(
     "button",
     {
-      onClick: copia,
+      onClick: () => copia(location.href, "link"),
       className: "px-3 py-1 rounded-full",
-      style: { background: C.ochre, color: C.ink, fontFamily: MONO, fontSize: 10, letterSpacing: "0.08em" }
+      style: { background: C.ochre, color: C.ink, fontFamily: MONO, fontSize: 10, letterSpacing: "0.06em" }
     },
-    copiato ? "COPIATO" : "COPIA LINK PER VIKI"
-  ));
+    fatto === "link" ? "COPIATO" : "COPIA LINK"
+  ), /* @__PURE__ */ React.createElement(
+    "button",
+    {
+      onClick: () => copia(archivio.codice, "codice"),
+      className: "px-3 py-1 rounded-full",
+      style: { border: "1px solid #9DC4C6", color: "#9DC4C6", fontFamily: MONO, fontSize: 10, letterSpacing: "0.06em" }
+    },
+    fatto === "codice" ? "COPIATO" : "COPIA CODICE"
+  ))), !online && /* @__PURE__ */ React.createElement("div", { className: "mt-1", style: { fontFamily: BODY, fontSize: 11, color: "#FFD9A0" } }, "Questa \xE8 un'anteprima locale: il link non funziona sul telefono di Viki. Mettila prima online."), fatto === "manuale" && /* @__PURE__ */ React.createElement("div", { className: "mt-1", style: { fontFamily: BODY, fontSize: 11, color: "#FFD9A0" } }, "Copia non riuscita: tieni premuto sul codice qui sopra e copialo a mano."));
 }
 function Radice() {
   return /* @__PURE__ */ React.createElement(React.Fragment, null, /* @__PURE__ */ React.createElement(BarraCodice, null), /* @__PURE__ */ React.createElement(Avvio, null));
